@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Bot Admin Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        dark: {
+                            bg: '#0b0f17',
+                            card: '#111827',
+                            border: '#1f2937',
+                            hover: '#1e293b'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js for Dashboard Visual Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+        }
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f17;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+    </style>
+</head>
+<body class="bg-dark-bg text-gray-100 antialiased min-h-screen flex flex-col">
+
+    <!-- LOGIN MODAL CONTAINER (Shows when logged out) -->
+    <div id="loginModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-50 transition-all">
+        <div class="bg-dark-card border border-dark-border p-8 rounded-2xl w-full max-w-md shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl"></div>
+            
+            <div class="flex items-center justify-center mb-6">
+                <div class="p-3 bg-brand-600/20 text-brand-500 rounded-2xl border border-brand-500/30">
+                    <i data-lucide="bot" class="w-10 h-10"></i>
+                </div>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-center text-white mb-1">অ্যাডমিন কন্ট্রোল প্যানেল</h2>
+            <p class="text-gray-400 text-center text-sm mb-6">Telegram Bot Management Center</p>
+            
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Admin ID</label>
+                    <div class="relative">
+                        <i data-lucide="shield" class="w-5 h-5 absolute left-3 top-3 text-gray-500"></i>
+                        <input type="text" id="adminIdInput" value="5960013484" required class="w-full pl-10 pr-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-white outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Password</label>
+                    <div class="relative">
+                        <i data-lucide="key" class="w-5 h-5 absolute left-3 top-3 text-gray-500"></i>
+                        <input type="password" id="adminPassInput" value="admin123" required class="w-full pl-10 pr-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl focus:border-brand-500 focus:ring-1 focus:ring-brand-500 text-white outline-none">
+                    </div>
+                </div>
+
+                <div id="loginError" class="text-rose-500 text-xs font-medium text-center hidden">
+                    ❌ ভুল Admin ID অথবা Password!
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-brand-600/30">
+                    <i data-lucide="log-in" class="w-5 h-5"></i> লগইন করুন
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="appContainer" class="flex-1 flex overflow-hidden hidden">
+        
+        <!-- SIDEBAR -->
+        <aside id="sidebar" class="w-64 bg-dark-card border-r border-dark-border flex flex-col shrink-0 transition-all duration-300">
+            <!-- Sidebar Header -->
+            <div class="p-5 border-b border-dark-border flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="p-2 bg-brand-600/20 text-brand-500 rounded-xl border border-brand-500/30">
+                        <i data-lucide="bot" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-white text-base leading-tight">Bot Admin</h1>
+                        <span class="text-xs text-emerald-400 flex items-center gap-1 font-medium">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> DB Synced
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 p-4 space-y-1.5 overflow-y-auto text-sm">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-brand-500 bg-brand-500/10">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5"></i> ড্যাশবোর্ড (Overview)
+                </button>
+
+                <button onclick="switchTab('users')" id="nav-users" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-gray-400 hover:bg-dark-hover hover:text-white">
+                    <i data-lucide="users" class="w-5 h-5"></i> ইউজার লিস্ট (Users)
+                </button>
+
+                <button onclick="switchTab('withdrawals')" id="nav-withdrawals" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-gray-400 hover:bg-dark-hover hover:text-white justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="credit-card" class="w-5 h-5"></i> উইথড্র রিকোয়েস্ট
+                    </div>
+                    <span id="withdrawBadge" class="bg-rose-500/20 text-rose-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+
+                <button onclick="switchTab('consta')" id="nav-consta" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-gray-400 hover:bg-dark-hover hover:text-white justify-between">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="coins" class="w-5 h-5"></i> Consta সেলস
+                    </div>
+                    <span id="constaBadge" class="bg-amber-500/20 text-amber-400 text-xs px-2 py-0.5 rounded-full font-bold">0</span>
+                </button>
+
+                <button onclick="switchTab('files')" id="nav-files" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-gray-400 hover:bg-dark-hover hover:text-white">
+                    <i data-lucide="folder-kanban" class="w-5 h-5"></i> অ্যাকাউন্ট ফাইল ও এপ্রুভাল
+                </button>
+
+                <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-gray-400 hover:bg-dark-hover hover:text-white">
+                    <i data-lucide="sliders" class="w-5 h-5"></i> বট সেটিংস ও কন্ট্রোল
+                </button>
+
+                <button onclick="switchTab('broadcast')" id="nav-broadcast" class="nav-btn w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium transition text-gray-400 hover:bg-dark-hover hover:text-white">
+                    <i data-lucide="megaphone" class="w-5 h-5"></i> ব্রডকাস্ট মেসেজ
+                </button>
+            </nav>
+
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-dark-border">
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl text-sm font-medium transition">
+                    <i data-lucide="log-out" class="w-4 h-4"></i> লগআউট
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-1 flex flex-col bg-dark-bg overflow-y-auto">
+            
+            <!-- TOP NAVBAR -->
+            <header class="bg-dark-card border-b border-dark-border px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-dark-hover">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <div id="pageTitle" class="text-lg font-bold text-white">ড্যাশবোর্ড (Overview)</div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Quick Toggle Switch Indicator -->
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-dark-bg border border-dark-border rounded-xl">
+                        <span class="text-xs text-gray-400 font-medium">Master Switch:</span>
+                        <span id="quickMasterBadge" class="text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400">ACTIVE</span>
+                    </div>
+
+                    <!-- Admin User Avatar -->
+                    <div class="flex items-center gap-3 border-l border-dark-border pl-4">
+                        <div class="w-8 h-8 rounded-full bg-brand-600 flex items-center justify-center font-bold text-white text-xs">
+                            AD
+                        </div>
+                        <div class="hidden sm:block">
+                            <p class="text-xs font-semibold text-white">System Admin</p>
+                            <p class="text-[10px] text-gray-400" id="currentAdminId">ID: 5960013484</p>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- DYNAMIC TAB CONTENT -->
+            <div class="p-6 space-y-6 flex-1">
+                
+                <!-- TAB 1: DASHBOARD OVERVIEW -->
+                <div id="tab-dashboard" class="tab-content space-y-6">
+                    <!-- Quick Stats Grid -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <!-- Stat Card 1 -->
+                        <div class="bg-dark-card border border-dark-border p-5 rounded-2xl relative overflow-hidden">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">মোট ইউজার</p>
+                                    <h3 id="statTotalUsers" class="text-2xl font-bold text-white mt-1">0</h3>
+                                </div>
+                                <div class="p-3 bg-brand-500/10 text-brand-500 rounded-xl">
+                                    <i data-lucide="users" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-xs text-gray-400">
+                                মোট ইউজার ব্যালেন্স: <span id="statTotalUserBalance" class="text-emerald-400 font-semibold">৳0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat Card 2 -->
+                        <div class="bg-dark-card border border-dark-border p-5 rounded-2xl relative overflow-hidden">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">পেন্ডিং উইথড্র</p>
+                                    <h3 id="statPendingWithdraws" class="text-2xl font-bold text-rose-400 mt-1">0</h3>
+                                </div>
+                                <div class="p-3 bg-rose-500/10 text-rose-500 rounded-xl">
+                                    <i data-lucide="arrow-up-right" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-xs text-gray-400">
+                                পেয়িং রিকোয়েস্ট: <span id="statPendingWithdrawTk" class="text-rose-400 font-semibold">৳0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat Card 3 -->
+                        <div class="bg-dark-card border border-dark-border p-5 rounded-2xl relative overflow-hidden">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Consta সেল রিকোয়েস্ট</p>
+                                    <h3 id="statPendingConsta" class="text-2xl font-bold text-amber-400 mt-1">0</h3>
+                                </div>
+                                <div class="p-3 bg-amber-500/10 text-amber-500 rounded-xl">
+                                    <i data-lucide="coins" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-xs text-gray-400">
+                                বর্তমান রেট: <span id="statConstaRate" class="text-amber-400 font-semibold">৳20.00 / 1k</span>
+                            </div>
+                        </div>
+
+                        <!-- Stat Card 4 -->
+                        <div class="bg-dark-card border border-dark-border p-5 rounded-2xl relative overflow-hidden">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">একটিভ ফাইল অ্যাকাউন্টস</p>
+                                    <h3 id="statTotalAccounts" class="text-2xl font-bold text-indigo-400 mt-1">0</h3>
+                                </div>
+                                <div class="p-3 bg-indigo-500/10 text-indigo-500 rounded-xl">
+                                    <i data-lucide="file-text" class="w-6 h-6"></i>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-xs text-gray-400">
+                                Twitter: <span id="statTwCount" class="text-white font-medium">0</span> | Threads: <span id="statThCount" class="text-white font-medium">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task Status Controls Grid -->
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                        <div class="flex items-center justify-between border-b border-dark-border pb-4">
+                            <div>
+                                <h3 class="text-base font-bold text-white">⚙️ বট টাস্ক সিস্টেম কন্ট্রোল</h3>
+                                <p class="text-xs text-gray-400">বটের সকল টাস্কের অন/অফ স্ট্যাটাস রিয়েলটাইমে পরিবর্তন করুন</p>
+                            </div>
+                            <span class="text-xs text-gray-500 font-mono">bot.py settings table</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- Master Switch -->
+                            <div class="p-4 bg-dark-bg border border-dark-border rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-semibold text-white">Master Switch</p>
+                                    <p class="text-xs text-gray-400">সকল কাজ মাস্টার কন্ট্রোল</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="switch-master" onchange="toggleSetting('task_enabled', this.checked)" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                                </label>
+                            </div>
+
+                            <!-- Threads Switch -->
+                            <div class="p-4 bg-dark-bg border border-dark-border rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-semibold text-white">Threads Task</p>
+                                    <p class="text-xs text-gray-400">৳4.50 প্রতি একাউন্ট</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="switch-threads" onchange="toggleSetting('threads_task_enabled', this.checked)" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+                                </label>
+                            </div>
+
+                            <!-- Twitter Switch -->
+                            <div class="p-4 bg-dark-bg border border-dark-border rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-semibold text-white">Twitter Task</p>
+                                    <p class="text-xs text-gray-400">৳4.00 প্রতি একাউন্ট</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="switch-twitter" onchange="toggleSetting('twitter_task_enabled', this.checked)" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                                </label>
+                            </div>
+
+                            <!-- Consta Switch -->
+                            <div class="p-4 bg-dark-bg border border-dark-border rounded-xl flex items-center justify-between">
+                                <div>
+                                    <p class="text-sm font-semibold text-white">Consta Sell Task</p>
+                                    <p class="text-xs text-gray-400">কয়েন সেলিং সার্ভিস</p>
+                                </div>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="switch-consta" onchange="toggleSetting('consta_task_enabled', this.checked)" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visual Analytics Chart & Recent Activity -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Activity Chart -->
+                        <div class="lg:col-span-2 bg-dark-card border border-dark-border p-6 rounded-2xl">
+                            <h3 class="text-base font-bold text-white mb-4">📊 সাম্প্রতিক উইথড্র এবং সেলস গ্রাফ</h3>
+                            <div class="h-64">
+                                <canvas id="activityChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Active Files Status Widget -->
+                        <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                            <h3 class="text-base font-bold text-white border-b border-dark-border pb-3">📁 বর্তমান ফাইলের অবস্থা</h3>
+                            
+                            <div class="space-y-3">
+                                <div class="p-3 bg-dark-bg border border-dark-border rounded-xl space-y-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-sky-400 flex items-center gap-1">
+                                            <i data-lucide="twitter" class="w-4 h-4"></i> Twitter Active File
+                                        </span>
+                                        <span id="twFileCountBadge" class="text-xs px-2 py-0.5 bg-sky-500/10 text-sky-400 font-mono rounded">0 accounts</span>
+                                    </div>
+                                    <p id="twActiveFileName" class="text-sm font-mono text-gray-200 truncate">twitter_default.txt</p>
+                                </div>
+
+                                <div class="p-3 bg-dark-bg border border-dark-border rounded-xl space-y-1">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-xs font-semibold text-brand-400 flex items-center gap-1">
+                                            <i data-lucide="at-sign" class="w-4 h-4"></i> Threads Active File
+                                        </span>
+                                        <span id="thFileCountBadge" class="text-xs px-2 py-0.5 bg-brand-500/10 text-brand-400 font-mono rounded">0 accounts</span>
+                                    </div>
+                                    <p id="thActiveFileName" class="text-sm font-mono text-gray-200 truncate">threads_default.txt</p>
+                                </div>
+                            </div>
+
+                            <button onclick="switchTab('files')" class="w-full py-2 bg-dark-hover hover:bg-dark-border text-gray-300 text-xs font-medium rounded-xl transition flex items-center justify-center gap-1">
+                                <i data-lucide="external-link" class="w-3.5 h-3.5"></i> ফাইল ম্যানেজারে যান
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: USERS MANAGEMENT -->
+                <div id="tab-users" class="tab-content space-y-6 hidden">
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">👥 রেজিস্টার্ড ইউজার তালিকা</h3>
+                                <p class="text-xs text-gray-400">সকল ইউজারের ব্যালেন্স এবং তথ্য পরিচালনা করুন</p>
+                            </div>
+                            <!-- Search Bar -->
+                            <div class="relative w-full sm:w-64">
+                                <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-gray-500"></i>
+                                <input type="text" id="userSearchInput" oninput="renderUsersTable()" placeholder="User ID বা Username খুঁজুন..." class="w-full pl-9 pr-4 py-2 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-dark-bg text-gray-400 text-xs uppercase font-semibold border-b border-dark-border">
+                                    <tr>
+                                        <th class="px-4 py-3">User ID</th>
+                                        <th class="px-4 py-3">Username</th>
+                                        <th class="px-4 py-3">First Name</th>
+                                        <th class="px-4 py-3">বর্তমান ব্যালেন্স</th>
+                                        <th class="px-4 py-3">জয়েন করার সময়</th>
+                                        <th class="px-4 py-3 text-right">অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody" class="divide-y divide-dark-border text-gray-300">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: WITHDRAW REQUESTS -->
+                <div id="tab-withdrawals" class="tab-content space-y-6 hidden">
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">💳 উইথড্র রিকোয়েস্ট হিস্টোরি</h3>
+                                <p class="text-xs text-gray-400">পেন্ডিং উইথড্র এপ্রুভ (/paid) অথবা রিজেক্ট (/rejectwithdraw) করুন</p>
+                            </div>
+                            <!-- Filter Buttons -->
+                            <div class="flex items-center gap-2">
+                                <button onclick="filterWithdraws('ALL')" class="withdraw-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-brand-600 text-white" id="wf-ALL">সবগুলো</button>
+                                <button onclick="filterWithdraws('PENDING')" class="withdraw-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-dark-bg text-gray-400 hover:text-white" id="wf-PENDING">পেন্ডিং</button>
+                                <button onclick="filterWithdraws('PAID')" class="withdraw-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-dark-bg text-gray-400 hover:text-white" id="wf-PAID">পেড</button>
+                                <button onclick="filterWithdraws('REJECTED')" class="withdraw-filter-btn px-3 py-1.5 rounded-lg text-xs font-medium bg-dark-bg text-gray-400 hover:text-white" id="wf-REJECTED">বাতিল</button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-dark-bg text-gray-400 text-xs uppercase font-semibold border-b border-dark-border">
+                                    <tr>
+                                        <th class="px-4 py-3">ID</th>
+                                        <th class="px-4 py-3">User ID</th>
+                                        <th class="px-4 py-3">অ্যামাউন্ট</th>
+                                        <th class="px-4 py-3">চার্জ</th>
+                                        <th class="px-4 py-3">মোট কাটা</th>
+                                        <th class="px-4 py-3">মেথড / নম্বর</th>
+                                        <th class="px-4 py-3">স্ট্যাটাস</th>
+                                        <th class="px-4 py-3 text-right">অ্যাকশন</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="withdrawsTableBody" class="divide-y divide-dark-border text-gray-300">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: CONSTA SALES -->
+                <div id="tab-consta" class="tab-content space-y-6 hidden">
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-lg font-bold text-white">🪙 Consta Sell Requests</h3>
+                                <p class="text-xs text-gray-400">ইউজারদের পাঠানো Consta কয়েনের স্ক্রিনশট যাচাই ও ব্যালেন্স অনুমোদন</p>
+                            </div>
+                        </div>
+
+                        <!-- Grid view of Requests -->
+                        <div id="constaGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <!-- Rendered dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: FILES & BATCH ACCOUNT APPROVAL -->
+                <div id="tab-files" class="tab-content space-y-6 hidden">
+                    <!-- File Management Header Card -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Active File Switcher -->
+                        <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                            <h3 class="text-base font-bold text-white border-b border-dark-border pb-3">📂 সক্রিয় ফাইল সেটিংস</h3>
+                            
+                            <form onsubmit="updateActiveFiles(event)" class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">Active Twitter File (.txt)</label>
+                                    <input type="text" id="inputActiveTwFile" class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">Active Threads File (.txt)</label>
+                                    <input type="text" id="inputActiveThFile" class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+                                <button type="submit" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-xl transition">
+                                    ফাইল নাম আপডেট করুন
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Clear Files Card -->
+                        <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                            <h3 class="text-base font-bold text-white border-b border-dark-border pb-3">🧹 All Clear (ফাইল ক্লিয়ার)</h3>
+                            <p class="text-xs text-gray-400">
+                                বর্তমান সক্রিয় ফাইলগুলোর সমস্ত ইউজার অ্যাকাউন্ট ক্লিয়ার করে দেবে এবং হেডার লাইন রিসেট করবে।
+                            </p>
+                            <button onclick="allClearFiles()" class="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i> বর্তমান ফাইল ক্লিয়ার করুন (All Clear)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Batch Approval Box -->
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                        <div class="border-b border-dark-border pb-3">
+                            <h3 class="text-base font-bold text-white">📂 ব্যাচ একাউন্ট এপ্রুভাল ও পেআউট (Accept Account)</h3>
+                            <p class="text-xs text-gray-400">TXT ফাইলে থাকা গ্রহণযোগ্য Usernames পেস্ট করে একসাথেই সব ইউজারকে রিওয়ার্ড টাকা যোগ করে দিন</p>
+                        </div>
+
+                        <form onsubmit="processBatchAccept(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">টাস্ক টাইপ সিলেক্ট করুন</label>
+                                    <select id="batchTaskType" class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                        <option value="twitter">Twitter (৳4.00 per approved account)</option>
+                                        <option value="threads">Threads (৳4.50 per approved account)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">টার্গেট ফাইলের নাম</label>
+                                    <input type="text" id="batchTargetFilename" placeholder="যেমন: twitter_default.txt" required class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-400 mb-1">এপ্রুভড ইউজারনেম লিস্ট (প্রতি লাইনে ১টি করে Username)</label>
+                                <textarea id="batchUsernamesText" rows="6" placeholder="viet_1234&#10;nguyen_5678" required class="w-full px-4 py-2 bg-dark-bg border border-dark-border rounded-xl text-sm font-mono text-white focus:outline-none focus:border-brand-500"></textarea>
+                            </div>
+
+                            <button type="submit" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-xl transition flex items-center gap-2">
+                                <i data-lucide="check-circle-2" class="w-4 h-4"></i> অ্যাকাউন্ট অনুমোদন করুন (Approve & Pay)
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Submitted Files Account Viewer -->
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4">
+                        <h3 class="text-base font-bold text-white">📜 জমা হওয়া অ্যাকাউন্টের ডাটাবেস রেকর্ড</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-dark-bg text-gray-400 text-xs uppercase font-semibold border-b border-dark-border">
+                                    <tr>
+                                        <th class="px-4 py-3">Task Type</th>
+                                        <th class="px-4 py-3">File Name</th>
+                                        <th class="px-4 py-3">User ID</th>
+                                        <th class="px-4 py-3">Name / Username</th>
+                                        <th class="px-4 py-3">Password / 2FA</th>
+                                        <th class="px-4 py-3">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fileRecordsTableBody" class="divide-y divide-dark-border text-gray-300 font-mono text-xs">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 6: BOT SETTINGS CONFIGURATION -->
+                <div id="tab-settings" class="tab-content space-y-6 hidden">
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-6">
+                        <div class="border-b border-dark-border pb-4">
+                            <h3 class="text-lg font-bold text-white">⚙️ বটের গ্লোবাল সেটিংস (Settings Key-Value)</h3>
+                            <p class="text-xs text-gray-400">এই সেটিংসগুলো পরিবর্তনের সাথে সাথে ডাইরেক্ট Telegram Bot-এ আপডেট হয়ে যাবে</p>
+                        </div>
+
+                        <form onsubmit="saveGlobalSettings(event)" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">🔑 Threads Task Password</label>
+                                    <input type="text" id="settingTaskPassword" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">📅 Twitter Pass Date / Suffix</label>
+                                    <input type="text" id="settingTwitterPassDate" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">💰 Consta Rate (৳ per 1000 Consta)</label>
+                                    <input type="number" step="0.5" id="settingCoinRate" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">🏧 Minimum Withdraw Amount (TK)</label>
+                                    <input type="number" id="settingMinWithdraw" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">🪙 Consta Address / Admin Gmail</label>
+                                    <input type="text" id="settingCoinAddress" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">🔗 Twitter How to Work Tutorial Link</label>
+                                    <input type="url" id="settingTwitterLink" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500">
+                                </div>
+
+                                <div class="md:col-span-2">
+                                    <label class="block text-xs font-semibold text-gray-400 mb-1">👋 Welcome Message (স্বাগতম বার্তা)</label>
+                                    <textarea id="settingWelcomeMsg" rows="3" class="w-full px-4 py-2.5 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"></textarea>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-medium rounded-xl transition flex items-center gap-2 shadow-lg shadow-brand-600/30">
+                                <i data-lucide="save" class="w-4 h-4"></i> সেটিংস সেভ করুন
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- TAB 7: BROADCAST -->
+                <div id="tab-broadcast" class="tab-content space-y-6 hidden">
+                    <div class="bg-dark-card border border-dark-border p-6 rounded-2xl space-y-4 max-w-2xl">
+                        <div class="border-b border-dark-border pb-3">
+                            <h3 class="text-lg font-bold text-white">📣 ব্রডকাস্ট মেসেজ পাঠান</h3>
+                            <p class="text-xs text-gray-400">বটের সকল রেজিস্টার্ড ইউজারদের টেলিগ্রামে একসাথে মেসেজ অটোমেটিক পাঠান</p>
+                        </div>
+
+                        <form onsubmit="sendBroadcast(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-400 mb-1">মেসেজ কনটেন্ট (Message text)</label>
+                                <textarea id="broadcastMsgText" rows="6" placeholder="প্রিয় ইউজার, আমাদের নতুন আপডেট এসেছে..." required class="w-full px-4 py-3 bg-dark-bg border border-dark-border rounded-xl text-sm text-white focus:outline-none focus:border-brand-500"></textarea>
+                            </div>
+
+                            <button type="submit" class="w-full py-3 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-amber-600/30">
+                                <i data-lucide="send" class="w-4 h-4"></i> সকল ইউজারকে ব্রডকাস্ট পাঠান
+                            </button>
+                        </form>
+
+                        <div id="broadcastStatus" class="p-4 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs hidden">
+                            <!-- Status message -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- MODAL FOR USER BALANCE EDITING -->
+    <div id="userModal" class="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-dark-card border border-dark-border p-6 rounded-2xl w-full max-w-md space-y-4">
+            <div class="flex items-center justify-between border-b border-dark-border pb-3">
+                <h3 class="text-base font-bold text-white">✏️ ইউজার ব্যালেন্স এডিট</h3>
+                <button onclick="closeUserModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <input type="hidden" id="editUserId">
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">User ID</label>
+                <input type="text" id="editUserIdDisplay" readonly class="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm text-gray-400 font-mono">
+            </div>
+
+            <div>
+                <label class="block text-xs text-gray-400 mb-1">নতুন ব্যালেন্স (TK)</label>
+                <input type="number" step="0.1" id="editUserBalanceInput" class="w-full px-3 py-2 bg-dark-bg border border-dark-border rounded-lg text-sm text-white focus:outline-none focus:border-brand-500">
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button onclick="closeUserModal()" class="px-4 py-2 bg-dark-bg hover:bg-dark-hover text-gray-300 text-sm font-medium rounded-lg">বাতিল</button>
+                <button onclick="saveUserBalance()" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium rounded-lg">আপডেট করুন</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FOR CONSTA SCREENSHOT PROOF VIEW -->
+    <div id="photoModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+        <div class="bg-dark-card border border-dark-border p-4 rounded-2xl w-full max-w-lg space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">📸 Consta Transfer Proof Screenshot</h3>
+                <button onclick="closePhotoModal()" class="text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div class="bg-dark-bg rounded-xl overflow-hidden p-2 flex items-center justify-center min-h-[250px]">
+                <img id="photoModalImg" src="" alt="Proof" class="max-h-[70vh] object-contain rounded-lg">
+            </div>
+        </div>
+    </div>
+
+    <!-- INITIALIZATION & REACTIVE ENGINE SCRIPT -->
+    <script>
+        // DEFAULT INITIAL MOCK DATA BASE (Mirrors sqlite3 schema in bot.py)
+        const initialDB = {
+            settings: {
+                welcome: "স্বাগতম! নিচের মেনু থেকে একটি অপশন বেছে নাও।",
+                min_withdraw: "100",
+                withdraw_enabled: "1",
+                task_password: "Pass123456",
+                twitter_pass_date: "23",
+                task_enabled: "1",
+                threads_task_enabled: "1",
+                twitter_task_enabled: "1",
+                consta_task_enabled: "1",
+                coin_address: "admin_consta@gmail.com / Address Not Set",
+                coin_rate: "20",
+                twitter_how_to_work_link: "https://t.me/example_tutorial",
+                active_twitter_file: "twitter_default.txt",
+                active_threads_file: "threads_default.txt"
+            },
+            users: [
+                { user_id: 5960013484, username: "admin_boss", first_name: "Admin User", balance: 500.00, joined_at: "2026-01-10 10:00:00" },
+                { user_id: 1284920491, username: "rahim_bd", first_name: "Rahim Ali", balance: 145.50, joined_at: "2026-02-01 14:22:00" },
+                { user_id: 9384019284, username: "karim_88", first_name: "Karim Uddin", balance: 42.00, joined_at: "2026-02-05 09:12:00" },
+                { user_id: 4810294812, username: "tanvir_tech", first_name: "Tanvir Ahmed", balance: 310.00, joined_at: "2026-02-07 18:45:00" }
+            ],
+            withdrawals: [
+                { id: 101, user_id: 1284920491, amount: 150.00, charge: 5.00, method: "bKash", account: "01700000000", status: "PENDING", created_at: "2026-02-08 11:20:00" },
+                { id: 102, user_id: 9384019284, amount: 100.00, charge: 5.00, method: "Nagad", account: "01800000000", status: "PAID", created_at: "2026-02-07 16:10:00" }
+            ],
+            coin_sales: [
+                { id: 501, user_id: 4810294812, coin_amount: 1000, total_tk: 20.00, sender_email: "tanvir.user@gmail.com", photo_id: "https://picsum.photos/400/300?random=1", status: "PENDING", created_at: "2026-02-09 08:30:00" }
+            ],
+            file_records: [
+                { id: 1, task_type: "twitter", file_name: "twitter_default.txt", user_id: 1284920491, name: "Nguyen Thi Mai", username: "viet_1234", password: "randPass23", tfa: "JBSWY3DPEHPK3PXP", status: "PENDING" },
+                { id: 2, task_type: "threads", file_name: "threads_default.txt", user_id: 9384019284, name: "Tran Thi Loan", username: "linh_9921", password: "Pass123456", tfa: "K47XW238SHP81PXP", status: "APPROVED" }
+            ]
+        };
+
+        // LOAD OR INIT LOCALSTORAGE
+        function getDB() {
+            const data = localStorage.getItem('tg_bot_db');
+            if(!data) {
+                localStorage.setItem('tg_bot_db', JSON.stringify(initialDB));
+                return initialDB;
+            }
+            return JSON.parse(data);
+        }
+
+        function saveDB(db) {
+            localStorage.setItem('tg_bot_db', JSON.stringify(db));
+            refreshUI();
+        }
+
+        // STATE VARS
+        let currentWithdrawFilter = 'ALL';
+        let activityChartInstance = null;
+
+        // AUTHENTICATION LOGIC
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const id = document.getElementById('adminIdInput').value.trim();
+            const pass = document.getElementById('adminPassInput').value.trim();
+
+            // Match python script default ADMIN_ID
+            if (id === '5960013484' && pass === 'admin123') {
+                localStorage.setItem('tg_admin_logged', 'true');
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                initApp();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem('tg_admin_logged');
+            location.reload();
+        }
+
+        // APP INIT
+        function initApp() {
+            lucide.createIcons();
+            refreshUI();
+            initChart();
+        }
+
+        // REFRESH ENTIRE UI FROM DB
+        function refreshUI() {
+            const db = getDB();
+
+            // Stats Update
+            document.getElementById('statTotalUsers').innerText = db.users.length;
+            const totalBal = db.users.reduce((acc, u) => acc + (parseFloat(u.balance) || 0), 0);
+            document.getElementById('statTotalUserBalance').innerText = `৳${totalBal.toFixed(2)}`;
+
+            const pendingWithdraws = db.withdrawals.filter(w => w.status === 'PENDING');
+            document.getElementById('statPendingWithdraws').innerText = pendingWithdraws.length;
+            document.getElementById('withdrawBadge').innerText = pendingWithdraws.length;
+
+            const pendingWithdrawTk = pendingWithdraws.reduce((acc, w) => acc + (parseFloat(w.amount) + parseFloat(w.charge)), 0);
+            document.getElementById('statPendingWithdrawTk').innerText = `৳${pendingWithdrawTk.toFixed(2)}`;
+
+            const pendingConsta = db.coin_sales.filter(c => c.status === 'PENDING');
+            document.getElementById('statPendingConsta').innerText = pendingConsta.length;
+            document.getElementById('constaBadge').innerText = pendingConsta.length;
+
+            document.getElementById('statConstaRate').innerText = `৳${db.settings.coin_rate || 20} / 1k`;
+
+            const twCount = db.file_records.filter(r => r.task_type === 'twitter').length;
+            const thCount = db.file_records.filter(r => r.task_type === 'threads').length;
+            document.getElementById('statTotalAccounts').innerText = twCount + thCount;
+            document.getElementById('statTwCount').innerText = twCount;
+            document.getElementById('statThCount').innerText = thCount;
+
+            document.getElementById('twFileCountBadge').innerText = `${twCount} accounts`;
+            document.getElementById('thFileCountBadge').innerText = `${thCount} accounts`;
+            document.getElementById('twActiveFileName').innerText = db.settings.active_twitter_file || 'twitter_default.txt';
+            document.getElementById('thActiveFileName').innerText = db.settings.active_threads_file || 'threads_default.txt';
+
+            // Switches Update
+            document.getElementById('switch-master').checked = db.settings.task_enabled === '1';
+            document.getElementById('switch-threads').checked = db.settings.threads_task_enabled === '1';
+            document.getElementById('switch-twitter').checked = db.settings.twitter_task_enabled === '1';
+            document.getElementById('switch-consta').checked = db.settings.consta_task_enabled === '1';
+
+            const quickBadge = document.getElementById('quickMasterBadge');
+            if (db.settings.task_enabled === '1') {
+                quickBadge.innerText = 'ACTIVE';
+                quickBadge.className = 'text-xs px-2 py-0.5 rounded-full font-bold bg-emerald-500/20 text-emerald-400';
+            } else {
+                quickBadge.innerText = 'OFF';
+                quickBadge.className = 'text-xs px-2 py-0.5 rounded-full font-bold bg-rose-500/20 text-rose-400';
+            }
+
+            // Tables & Views
+            renderUsersTable();
+            renderWithdrawsTable();
+            renderConstaGrid();
+            renderFileRecordsTable();
+            loadSettingsInputs();
+        }
+
+        // TAB SWITCHER
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(b => {
+                b.classList.remove('text-brand-500', 'bg-brand-500/10');
+                b.classList.add('text-gray-400');
+            });
+
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`nav-${tabId}`);
+            if(activeBtn) {
+                activeBtn.classList.add('text-brand-500', 'bg-brand-500/10');
+                activeBtn.classList.remove('text-gray-400');
+            }
+
+            const titles = {
+                dashboard: 'ড্যাশবোর্ড (Overview)',
+                users: 'ইউজার লিস্ট (Users)',
+                withdrawals: 'উইথড্র রিকোয়েস্ট',
+                consta: 'Consta সেলস রিকোয়েস্ট',
+                files: 'অ্যাকাউন্ট ফাইল ও এপ্রুভাল',
+                settings: 'বট সেটিংস ও কন্ট্রোল',
+                broadcast: 'ব্রডকাস্ট মেসেজ'
+            };
+            document.getElementById('pageTitle').innerText = titles[tabId] || 'Dashboard';
+        }
+
+        // TOGGLE SIDEBAR MOBILE
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('-ml-64');
+        }
+
+        // SETTINGS TOGGLE HANDLER
+        function toggleSetting(key, enabled) {
+            const db = getDB();
+            db.settings[key] = enabled ? '1' : '0';
+            saveDB(db);
+        }
+
+        // RENDER USERS TABLE
+        function renderUsersTable() {
+            const db = getDB();
+            const search = (document.getElementById('userSearchInput').value || '').toLowerCase();
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+
+            const filtered = db.users.filter(u => 
+                u.user_id.toString().includes(search) || 
+                (u.username && u.username.toLowerCase().includes(search)) ||
+                (u.first_name && u.first_name.toLowerCase().includes(search))
+            );
+
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">কোনো ইউজার পাওয়া যায়নি</td></tr>`;
+                return;
+            }
+
+            filtered.forEach(u => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-dark-hover transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-mono font-medium text-white">${u.user_id}</td>
+                    <td class="px-4 py-3 text-brand-400">@${u.username || '-'}</td>
+                    <td class="px-4 py-3">${u.first_name || '-'}</td>
+                    <td class="px-4 py-3 font-semibold text-emerald-400">৳${parseFloat(u.balance).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-xs text-gray-400">${u.joined_at}</td>
+                    <td class="px-4 py-3 text-right">
+                        <button onclick="openEditUserModal(${u.user_id}, ${u.balance})" class="px-2.5 py-1 bg-brand-600/20 text-brand-400 hover:bg-brand-600/30 rounded-lg text-xs font-medium transition">
+                            ব্যালেন্স এডিট
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // USER EDIT MODAL
+        function openEditUserModal(userId, currentBal) {
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUserIdDisplay').value = userId;
+            document.getElementById('editUserBalanceInput').value = currentBal;
+            document.getElementById('userModal').classList.remove('hidden');
+        }
+        function closeUserModal() {
+            document.getElementById('userModal').classList.add('hidden');
+        }
+        function saveUserBalance() {
+            const uid = parseInt(document.getElementById('editUserId').value);
+            const newBal = parseFloat(document.getElementById('editUserBalanceInput').value) || 0;
+            const db = getDB();
+            const user = db.users.find(u => u.user_id === uid);
+            if(user) {
+                user.balance = newBal;
+                saveDB(db);
+                closeUserModal();
+            }
+        }
+
+        // WITHDRAW MANAGEMENT
+        function filterWithdraws(status) {
+            currentWithdrawFilter = status;
+            document.querySelectorAll('.withdraw-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-brand-600', 'text-white');
+                btn.classList.add('bg-dark-bg', 'text-gray-400');
+            });
+            const activeBtn = document.getElementById(`wf-${status}`);
+            if(activeBtn) {
+                activeBtn.classList.add('bg-brand-600', 'text-white');
+                activeBtn.classList.remove('bg-dark-bg', 'text-gray-400');
+            }
+            renderWithdrawsTable();
+        }
+
+        function renderWithdrawsTable() {
+            const db = getDB();
+            const tbody = document.getElementById('withdrawsTableBody');
+            tbody.innerHTML = '';
+
+            let list = db.withdrawals;
+            if(currentWithdrawFilter !== 'ALL') {
+                list = list.filter(w => w.status === currentWithdrawFilter);
+            }
+
+            if(list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-4 py-8 text-center text-gray-500">কোনো উইথড্র রিকোয়েস্ট পাওয়া যায়নি</td></tr>`;
+                return;
+            }
+
+            list.forEach(w => {
+                const totalDeduct = (parseFloat(w.amount) + parseFloat(w.charge)).toFixed(2);
+                let statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400">PENDING</span>`;
+                if(w.status === 'PAID') statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/10 text-emerald-400">PAID</span>`;
+                if(w.status === 'REJECTED') statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-rose-500/10 text-rose-400">REJECTED</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-dark-hover transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-mono text-gray-400">#${w.id}</td>
+                    <td class="px-4 py-3 font-mono text-white">${w.user_id}</td>
+                    <td class="px-4 py-3 font-semibold text-white">৳${parseFloat(w.amount).toFixed(2)}</td>
+                    <td class="px-4 py-3 text-rose-400">৳${parseFloat(w.charge).toFixed(2)}</td>
+                    <td class="px-4 py-3 font-bold text-emerald-400">৳${totalDeduct}</td>
+                    <td class="px-4 py-3">
+                        <span class="font-semibold text-brand-400">${w.method}</span>: <span class="font-mono text-xs text-gray-300">${w.account}</span>
+                    </td>
+                    <td class="px-4 py-3">${statusBadge}</td>
+                    <td class="px-4 py-3 text-right">
+                        ${w.status === 'PENDING' ? `
+                            <div class="flex items-center justify-end gap-1.5">
+                                <button onclick="approveWithdraw(${w.id})" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition">
+                                    Paid (/paid)
+                                </button>
+                                <button onclick="rejectWithdraw(${w.id})" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium transition">
+                                    Reject
+                                </button>
+                            </div>
+                        ` : '<span class="text-xs text-gray-500">সম্পন্ন</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function approveWithdraw(id) {
+            const db = getDB();
+            const w = db.withdrawals.find(x => x.id === id);
+            if(w && w.status === 'PENDING') {
+                w.status = 'PAID';
+                saveDB(db);
+            }
+        }
+
+        function rejectWithdraw(id) {
+            const db = getDB();
+            const w = db.withdrawals.find(x => x.id === id);
+            if(w && w.status === 'PENDING') {
+                w.status = 'REJECTED';
+                // Refund money + charge back to user balance (Mirroring bot.py /rejectwithdraw)
+                const refund = parseFloat(w.amount) + parseFloat(w.charge);
+                const user = db.users.find(u => u.user_id === w.user_id);
+                if(user) {
+                    user.balance = (parseFloat(user.balance) || 0) + refund;
+                }
+                saveDB(db);
+            }
+        }
+
+        // CONSTA SALES MANAGEMENT
+        function renderConstaGrid() {
+            const db = getDB();
+            const container = document.getElementById('constaGrid');
+            container.innerHTML = '';
+
+            if(db.coin_sales.length === 0) {
+                container.innerHTML = `<div class="col-span-full py-8 text-center text-gray-500">কোনো Consta Sell Request পাওয়া যায়নি</div>`;
+                return;
+            }
+
+            db.coin_sales.forEach(c => {
+                let statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-500/10 text-amber-400">PENDING</span>`;
+                if(c.status === 'APPROVED') statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/10 text-emerald-400">APPROVED</span>`;
+                if(c.status === 'REJECTED') statusBadge = `<span class="px-2 py-0.5 rounded text-xs font-bold bg-rose-500/10 text-rose-400">REJECTED</span>`;
+
+                const card = document.createElement('div');
+                card.className = 'bg-dark-bg border border-dark-border p-4 rounded-xl space-y-3';
+                card.innerHTML = `
+                    <div class="flex items-center justify-between border-b border-dark-border pb-2">
+                        <span class="font-mono text-xs text-gray-400">Request #${c.id}</span>
+                        ${statusBadge}
+                    </div>
+
+                    <div class="space-y-1 text-xs">
+                        <p class="text-gray-300">User ID: <span class="font-mono font-bold text-white">${c.user_id}</span></p>
+                        <p class="text-gray-300">Consta: <span class="font-bold text-amber-400">${c.coin_amount}</span> টি | TK: <span class="font-bold text-emerald-400">৳${parseFloat(c.total_tk).toFixed(2)}</span></p>
+                        <p class="text-gray-300">Sender Email: <span class="font-mono text-gray-200">${c.sender_email}</span></p>
+                        <p class="text-gray-500">${c.created_at}</p>
+                    </div>
+
+                    <button onclick="openPhotoModal('${c.photo_id}')" class="w-full py-1.5 bg-dark-hover hover:bg-dark-border text-gray-300 text-xs rounded-lg transition flex items-center justify-center gap-1">
+                        <i data-lucide="image" class="w-3.5 h-3.5"></i> প্রুফ স্ক্রিনশট দেখুন
+                    </button>
+
+                    ${c.status === 'PENDING' ? `
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <button onclick="approveConsta(${c.id})" class="py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium transition">
+                                Approve (Add TK)
+                            </button>
+                            <button onclick="rejectConsta(${c.id})" class="py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-medium transition">
+                                Reject
+                            </button>
+                        </div>
+                    ` : ''}
+                `;
+                container.appendChild(card);
+            });
+            lucide.createIcons();
+        }
+
+        function openPhotoModal(imgUrl) {
+            document.getElementById('photoModalImg').src = imgUrl;
+            document.getElementById('photoModal').classList.remove('hidden');
+        }
+        function closePhotoModal() {
+            document.getElementById('photoModal').classList.add('hidden');
+        }
+
+        function approveConsta(id) {
+            const db = getDB();
+            const c = db.coin_sales.find(x => x.id === id);
+            if(c && c.status === 'PENDING') {
+                c.status = 'APPROVED';
+                const user = db.users.find(u => u.user_id === c.user_id);
+                if(user) {
+                    user.balance = (parseFloat(user.balance) || 0) + parseFloat(c.total_tk);
+                }
+                saveDB(db);
+            }
+        }
+
+        function rejectConsta(id) {
+            const db = getDB();
+            const c = db.coin_sales.find(x => x.id === id);
+            if(c && c.status === 'PENDING') {
+                c.status = 'REJECTED';
+                saveDB(db);
+            }
+        }
+
+        // BATCH ACCOUNT APPROVAL & FILE MANAGEMENT
+        function updateActiveFiles(e) {
+            e.preventDefault();
+            const db = getDB();
+            db.settings.active_twitter_file = document.getElementById('inputActiveTwFile').value.trim();
+            db.settings.active_threads_file = document.getElementById('inputActiveThFile').value.trim();
+            saveDB(db);
+            alert('✅ নতুন ফাইল নাম সফলভাবে সক্রিয় করা হয়েছে!');
+        }
+
+        function allClearFiles() {
+            if(confirm('⚠️ আপনি কি নিশ্চিত যে বর্তমান সক্রিয় ফাইলের সমস্ত অ্যাকাউন্ট ক্লিয়ার করতে চান?')) {
+                const db = getDB();
+                db.file_records = [];
+                saveDB(db);
+                alert('🧹 বর্তমান সক্রিয় ফাইলের অল ক্লিয়ার সফলভাবে সম্পন্ন হয়েছে!');
+            }
+        }
+
+        function processBatchAccept(e) {
+            e.preventDefault();
+            const taskType = document.getElementById('batchTaskType').value;
+            const filename = document.getElementById('batchTargetFilename').value.trim();
+            const rawText = document.getElementById('batchUsernamesText').value;
+
+            const usernames = rawText.split('\n').map(u => u.trim().replace('@', '')).filter(u => u.length > 0);
+            
+            if(usernames.length === 0) {
+                alert('❌ দয়া করে কমপক্ষে একটি Username দিন');
+                return;
+            }
+
+            const db = getDB();
+            const reward = taskType === 'twitter' ? 4.00 : 4.50;
+            let successCount = 0;
+
+            usernames.forEach(uname => {
+                // Find pending record or user matching username
+                let record = db.file_records.find(r => r.username === uname && r.status === 'PENDING');
+                if(!record) {
+                    // Create simulated record if not existing
+                    record = {
+                        id: db.file_records.length + 1,
+                        task_type: taskType,
+                        file_name: filename,
+                        user_id: 1284920491, // default mapped user
+                        name: "User Account",
+                        username: uname,
+                        password: "Pass123456",
+                        tfa: "SECRET2FAKEY",
+                        status: "APPROVED"
+                    };
+                    db.file_records.push(record);
+                } else {
+                    record.status = 'APPROVED';
+                }
+
+                // Add reward money to user
+                const user = db.users.find(u => u.user_id === record.user_id);
+                if(user) {
+                    user.balance = (parseFloat(user.balance) || 0) + reward;
+                }
+                successCount++;
+            });
+
+            saveDB(db);
+            document.getElementById('batchUsernamesText').value = '';
+            alert(`✅ ${successCount} টি অ্যাকাউন্ট সফলভাবে এপ্রুভ হয়েছে এবং ইউজারের ব্যালেন্স যোগ হয়েছে! (৳${reward} / account)`);
+        }
+
+        function renderFileRecordsTable() {
+            const db = getDB();
+            const tbody = document.getElementById('fileRecordsTableBody');
+            tbody.innerHTML = '';
+
+            if(db.file_records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">কোনো ফাইল রেকর্ড পাওয়া যায়নি</td></tr>`;
+                return;
+            }
+
+            db.file_records.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-dark-hover transition';
+                tr.innerHTML = `
+                    <td class="px-4 py-3 uppercase font-bold text-[10px] ${r.task_type === 'twitter' ? 'text-sky-400' : 'text-brand-400'}">${r.task_type}</td>
+                    <td class="px-4 py-3 text-gray-300">${r.file_name}</td>
+                    <td class="px-4 py-3 text-white">${r.user_id}</td>
+                    <td class="px-4 py-3">${r.name} (@${r.username})</td>
+                    <td class="px-4 py-3 text-gray-400">${r.password} / ${r.tfa}</td>
+                    <td class="px-4 py-3 font-bold ${r.status === 'APPROVED' ? 'text-emerald-400' : 'text-amber-400'}">${r.status}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // GLOBAL SETTINGS CONFIG
+        function loadSettingsInputs() {
+            const db = getDB();
+            document.getElementById('settingTaskPassword').value = db.settings.task_password || 'Pass123456';
+            document.getElementById('settingTwitterPassDate').value = db.settings.twitter_pass_date || '23';
+            document.getElementById('settingCoinRate').value = db.settings.coin_rate || '20';
+            document.getElementById('settingMinWithdraw').value = db.settings.min_withdraw || '100';
+            document.getElementById('settingCoinAddress').value = db.settings.coin_address || '';
+            document.getElementById('settingTwitterLink').value = db.settings.twitter_how_to_work_link || '';
+            document.getElementById('settingWelcomeMsg').value = db.settings.welcome || '';
+
+            document.getElementById('inputActiveTwFile').value = db.settings.active_twitter_file || 'twitter_default.txt';
+            document.getElementById('inputActiveThFile').value = db.settings.active_threads_file || 'threads_default.txt';
+        }
+
+        function saveGlobalSettings(e) {
+            e.preventDefault();
+            const db = getDB();
+            db.settings.task_password = document.getElementById('settingTaskPassword').value.trim();
+            db.settings.twitter_pass_date = document.getElementById('settingTwitterPassDate').value.trim();
+            db.settings.coin_rate = document.getElementById('settingCoinRate').value.trim();
+            db.settings.min_withdraw = document.getElementById('settingMinWithdraw').value.trim();
+            db.settings.coin_address = document.getElementById('settingCoinAddress').value.trim();
+            db.settings.twitter_how_to_work_link = document.getElementById('settingTwitterLink').value.trim();
+            db.settings.welcome = document.getElementById('settingWelcomeMsg').value.trim();
+
+            saveDB(db);
+            alert('✅ সেটিংস সফলভাবে আপডেট ও বটের সাথে সিঙ্ক হয়েছে!');
+        }
+
+        // BROADCAST MESSAGE
+        function sendBroadcast(e) {
+            e.preventDefault();
+            const text = document.getElementById('broadcastMsgText').value.trim();
+            if(!text) return;
+
+            const db = getDB();
+            const totalUsers = db.users.length;
+            const statusDiv = document.getElementById('broadcastStatus');
+
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerHTML = `✅ Broadcast Message Successfully Sent to <strong>${totalUsers}/${totalUsers}</strong> registered bot users!`;
+
+            document.getElementById('broadcastMsgText').value = '';
+            setTimeout(() => statusDiv.classList.add('hidden'), 5000);
+        }
+
+        // CHART.JS INIT
+        function initChart() {
+            const ctx = document.getElementById('activityChart').getContext('2d');
+            activityChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan 01', 'Jan 05', 'Jan 10', 'Jan 15', 'Jan 20', 'Feb 01', 'Feb 09'],
+                    datasets: [
+                        {
+                            label: 'Withdraw (TK)',
+                            data: [500, 1200, 800, 1600, 2100, 1400, 2500],
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Consta Sales (TK)',
+                            data: [200, 450, 600, 900, 1100, 850, 1800],
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#9ca3af' } }
+                    },
+                    scales: {
+                        x: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } },
+                        y: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } }
+                    }
+                }
+            });
+        }
+
+        // CHECK PREVIOUS LOGIN STATUS
+        window.addEventListener('DOMContentLoaded', () => {
+            if(localStorage.getItem('tg_admin_logged') === 'true') {
+                document.getElementById('loginModal').classList.add('hidden');
+                document.getElementById('appContainer').classList.remove('hidden');
+                initApp();
+            }
+        });
+    </script>
+</body>
+</html>
